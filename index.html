@@ -1,0 +1,1790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JARVIS – Money and Stocks in One Place</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* =====================================================
+   1. COLOURS – change these to change the whole look
+   ===================================================== */
+:root {
+  --text: #ffffff;
+  --soft: #d6c2a8;            /* softer text */
+  --gold: #f5c542;           /* Iron Man gold */
+  --red: #d62828;            /* Iron Man red */
+  --dark-red: #8f0f1a;
+  --box: rgba(255, 255, 255, 0.06);
+  --field: rgba(255, 255, 255, 0.09);
+  --border: rgba(255, 255, 255, 0.13);
+  --good: #4ade80;           /* gains */
+  --bad: #ff8a80;            /* losses */
+  color-scheme: dark;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; }
+
+/* =====================================================
+   2. BACKGROUND
+   ===================================================== */
+body {
+  margin: 0;
+  color: var(--text);
+  font: 15px/1.55 Manrope, Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(700px 500px at 85% 8%, rgba(245, 197, 66, 0.22), transparent 60%),
+    radial-gradient(600px 420px at 8% 92%, rgba(214, 40, 40, 0.32), transparent 60%),
+    linear-gradient(160deg, #0a0000 0%, #2a0606 55%, #4a0a0a 100%);
+  background-attachment: fixed;
+}
+/* gold wave lines along the bottom */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+   left: 0;
+    right: 0;
+     bottom: 0;
+  pointer-events: none;
+  opacity: 0.6;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 800' preserveAspectRatio='xMidYMax slice'%3E%3Cdefs%3E%3Cfilter id='g'%3E%3CfeGaussianBlur stdDeviation='3'/%3E%3C/filter%3E%3C/defs%3E%3Cg fill='none' stroke='%23f5c542' stroke-linecap='round'%3E%3Cpath d='M0 620 C120 560 200 700 320 640 S520 520 640 590 S840 700 960 610 S1180 520 1440 600' stroke-width='1.5' opacity='.5'/%3E%3Cpath d='M0 680 C140 630 240 740 380 690 S600 590 720 650 S940 740 1080 670 S1300 610 1440 660' stroke-width='1' opacity='.35'/%3E%3Cpath d='M0 560 C160 500 260 620 400 570 S620 470 760 530 S960 620 1100 550 S1320 480 1440 540' stroke-width='1' opacity='.25'/%3E%3C/g%3E%3Cpath d='M0 620 C120 560 200 700 320 640 S520 520 640 590 S840 700 960 610 S1180 520 1440 600' fill='none' stroke='%23f5c542' stroke-width='5' opacity='.25' filter='url(%23g)'/%3E%3C/svg%3E") center bottom / cover no-repeat;
+}
+/* soft blue "arc reactor" glow at the top right */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0; 
+  left: 0; 
+  right: 0;
+   bottom: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 78% 12%, rgba(125, 230, 255, 0.16), transparent 16%),
+    radial-gradient(ellipse 36% 2px at 78% 12%, rgba(160, 235, 255, 0.45), transparent);
+}
+
+/* =====================================================
+   3. LAYOUT: menu on the left, page on the right
+   ===================================================== */
+#app {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+nav {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
+  padding: 20px 12px;
+  background: rgba(18, 2, 2, 0.6);
+  border-right: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+main {
+  width: 100%;
+  max-width: 1100px;
+  padding: 32px clamp(16px, 4vw, 48px) 60px;
+}
+.logo { font-size: 20px; font-weight: 800; letter-spacing: 3px; padding: 4px 12px 18px; }
+nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: var(--soft);
+  text-decoration: none;
+  font-weight: 500;
+}
+nav a:hover, nav a.active { background: var(--field); color: var(--text); }
+nav a.active { box-shadow: inset 3px 0 var(--gold); }
+.badge { margin-left: auto; background: var(--red); color: white; border-radius: 10px; padding: 0 7px; font-size: 11px; }
+
+/* =====================================================
+   4. TEXT, BOXES, BUTTONS, FORMS, TABLES
+   ===================================================== */
+h1 { margin: 0 0 6px; font-size: clamp(26px, 4vw, 36px); font-weight: 800; }
+h2 { margin: 0 0 12px; font-size: 18px; }
+.sub { color: var(--soft); margin: 0 0 26px; }
+.soft { color: var(--soft); }
+.small { font-size: 12px; }
+.good { color: var(--good); }
+.bad { color: var(--bad); }
+.big { font-size: 28px; font-weight: 800; }
+.space { margin-top: 16px; }
+
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.grid.two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.grid.three { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-top: 16px; }
+.wide-and-narrow { display: grid; gap: 16px; grid-template-columns: 2fr 1fr; margin-top: 16px; }
+
+.card {
+  background: var(--box);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+a.card { display: block; color: inherit; text-decoration: none; }
+.big-icon { color: var(--gold); margin-bottom: 12px; }
+.big-icon .icon { width: 26px; height: 26px; stroke-width: 1.3; }
+.hero { padding: 30px 0 20px; }
+.hero h1 { font-size: clamp(34px, 6vw, 60px); line-height: 1.05; max-width: 16ch; }
+.hero p { max-width: 52ch; color: var(--soft); font-size: 17px; }
+
+button {
+  background: linear-gradient(135deg, var(--red), var(--dark-red));
+  color: white;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font: 700 14px Manrope, Arial, sans-serif;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.15); }
+button.plain { background: transparent; color: var(--text); border: 1px solid var(--border); }
+button.small { padding: 5px 10px; font-size: 12px; }
+button.pill-button { background: var(--field); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-weight: normal; }
+button.chip { background: none; border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-weight: normal; font-size: 13px; }
+button.chip.active { background: var(--field); border-color: var(--gold); }
+
+input, select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  margin: 4px 0 12px;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+}
+input[type=checkbox] { width: auto; margin: 0 6px 0 0; }
+label { display: block; font-size: 13px; color: var(--soft); }
+nav a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; color: var(--soft); font-weight: 500; font-size: 13px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+td { padding: 11px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.right { text-align: right; }
+.scroll { overflow-x: auto; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 8px; background: var(--field); font-size: 12px; color: var(--soft); }
+.pill { padding: 2px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.07); font-size: 12px; font-weight: 700; }
+
+.bar { height: 8px; border-radius: 6px; background: var(--field); overflow: hidden; margin: 4px 0 10px; }
+.bar div { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #b91c1c, #f5c542); }
+.bar div.over { background: var(--bad); }
+
+.icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.icon-box { width: 34px; height: 34px; border-radius: 10px; flex: none; display: grid; place-items: center; background: rgba(245, 197, 66, 0.14); color: var(--gold); }
+
+/* =====================================================
+   5. DASHBOARD AND LIST PIECES
+   ===================================================== */
+.stat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.section-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.section-head h2 { margin: 0; }
+.line { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; }
+.legend-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 6px 0; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; }
+.market-row { display: flex; gap: 12px; overflow-x: auto; }
+.market-card { min-width: 150px; flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--field); }
+.list-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.list-item > div { flex: 1; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--field); font-weight: 800; }
+
+/* alert boxes */
+.alert { display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--field); color: inherit; text-decoration: none; }
+.alert > div { flex: 1; }
+.alert.urgent { border-color: rgba(255, 138, 128, 0.6); background: rgba(214, 40, 40, 0.14); }
+.alert.warning { border-color: rgba(245, 197, 66, 0.55); background: rgba(245, 197, 66, 0.10); }
+.alert.ok { border-color: rgba(74, 222, 128, 0.4); }
+
+/* chat */
+.chat { display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow: auto; margin-bottom: 12px; }
+.msg { padding: 10px 14px; border-radius: 14px; max-width: 85%; background: var(--field); }
+.msg.me { align-self: flex-end; background: var(--red); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+
+/* small pop-up message */
+.toast {
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  color: black;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  z-index: 20;
+}
+
+/* =====================================================
+   6. PHONES: the menu becomes a bar at the top
+   ===================================================== */
+@media (max-width: 860px) {
+  #app { grid-template-columns: 1fr; }
+  nav { position: sticky; top: 0; height: auto; display: flex; overflow-x: auto; padding: 8px; border-right: 0; border-bottom: 1px solid var(--border); background: rgba(18, 2, 2, 0.92); z-index: 10; }
+  .logo { display: none; }
+  nav a { white-space: nowrap; }
+  .wide-and-narrow { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+  <nav id="menu"></nav>
+  <main id="page"></main>
+</div>
+<div id="message"></div>
+
+<script>
+/* =====================================================
+   1. BASIC INFORMATION
+   ===================================================== */
+var categories = ["Food", "Rent", "Transport", "Shopping", "Bills", "Health", "Fun", "Other"];
+
+// All the pages. Alerts is last.
+var pages = [
+  ["home", "Home"],
+  ["auth", "Login / Register"],
+  ["dashboard", "Dashboard"],
+  ["transactions", "Transactions"],
+  ["analytics", "Analytics"],
+  ["budget", "Budget Planner"],
+  ["assistant", "AI Assistant"],
+  ["profile", "Profile Settings"],
+  ["explorer", "Stock Explorer"],
+  ["savings", "Stock Savings"],
+  ["advisor", "AI Stock Advisor"],
+  ["portfolio", "Virtual Portfolio"],
+  ["alerts", "Alerts"]
+];
+
+// One small drawing (SVG shapes) for each page
+var icons = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+  auth: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  transactions: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  analytics: '<path d="M3 21h18M6 21V12M12 21V5M18 21v-6"/>',
+  budget: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  assistant: '<path d="M4 5h16v11H9l-5 4z"/>',
+  profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  explorer: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  savings: '<path d="M3 7h16a2 2 0 0 1 2 2v10H5a2 2 0 0 1-2-2z"/><path d="M3 7l12-3v3"/><circle cx="16.5" cy="13" r="1"/>',
+  advisor: '<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>',
+  portfolio: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"/>',
+  alerts: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 21h4"/>'
+};
+
+// Sample stocks. These prices are made up, they are NOT live.
+// change = today's % move, pe = P/E ratio, oneYear = 1-year return in %
+var stocks = [
+  { symbol: "RELIANCE",   name: "Reliance Industries", sector: "Energy",  price: 2915, change: 0.8,  pe: 24, risk: "Medium", oneYear: 14 },
+  { symbol: "TCS",        name: "Tata Consultancy",    sector: "IT",      price: 3920, change: -0.3, pe: 30, risk: "Low",    oneYear: 18 },
+  { symbol: "INFY",       name: "Infosys",             sector: "IT",      price: 1560, change: 0.5,  pe: 25, risk: "Low",    oneYear: 12 },
+  { symbol: "HDFCBANK",   name: "HDFC Bank",           sector: "Banking", price: 1655, change: 0.2,  pe: 18, risk: "Low",    oneYear: 9 },
+  { symbol: "ICICIBANK",  name: "ICICI Bank",          sector: "Banking", price: 1185, change: 1.1,  pe: 19, risk: "Low",    oneYear: 22 },
+  { symbol: "SBIN",       name: "State Bank of India", sector: "Banking", price: 790,  change: -0.6, pe: 11, risk: "Medium", oneYear: 28 },
+  { symbol: "ITC",        name: "ITC Ltd",             sector: "FMCG",    price: 432,  change: 0.4,  pe: 27, risk: "Low",    oneYear: 16 },
+  { symbol: "TATAMOTORS", name: "Tata Motors",         sector: "Auto",    price: 950,  change: 1.6,  pe: 9,  risk: "High",   oneYear: 35 },
+  { symbol: "BHARTIARTL", name: "Bharti Airtel",       sector: "Telecom", price: 1510, change: 0.9,  pe: 60, risk: "Medium", oneYear: 31 },
+  { symbol: "LT",         name: "Larsen & Toubro",     sector: "Infra",   price: 3610, change: -0.1, pe: 33, risk: "Medium", oneYear: 26 }
+];
+
+// Words used to guess the category of a payment
+var categoryWords = [
+  ["Food",      /swiggy|zomato|restaurant|cafe|food|bakery|domino|mcdonald|kfc|pizza|bigbasket|blinkit|zepto|grocer|dmart|mart/i],
+  ["Transport", /uber|ola|rapido|metro|irctc|petrol|fuel|bpcl|hpcl|indian oil|fastag|redbus|parking|cab/i],
+  ["Shopping",  /amazon|flipkart|myntra|ajio|nykaa|meesho|mall|store|shop/i],
+  ["Bills",     /electric|bescom|airtel|jio|vodafone|recharge|broadband|gas|water|insurance|\blic\b|bill|dth|tata play/i],
+  ["Rent",      /\brent\b|landlord|nobroker|housing/i],
+  ["Health",    /pharm|apollo|medplus|hospital|clinic|lab|1mg|doctor|medical/i],
+  ["Fun",       /netflix|spotify|prime|hotstar|bookmyshow|pvr|inox|game|steam|youtube|movie/i]
+];
+
+var monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/* =====================================================
+   2. SMALL HELPER FUNCTIONS
+   ===================================================== */
+function $(id) { return document.getElementById(id); }
+
+function two(n) { return (n < 10 ? "0" : "") + n; }
+
+// Turns a Date into text like 2026-11-22 (uses your own local time)
+function dateText(d) { return d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()); }
+
+function daysAgo(n) {
+  var d = new Date();
+  d.setDate(d.getDate() - n);
+  return dateText(d);
+}
+
+function thisMonth() { return dateText(new Date()).slice(0, 7); }      // for example "2026-11"
+
+function lastMonth() {
+  var d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1);
+  return dateText(d).slice(0, 7);
+}
+
+function daysLeftInMonth() {
+  var now = new Date();
+  var lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return lastDay - now.getDate();
+}
+
+function monthOf(item) { return item.date.slice(0, 7); }
+
+// Returns "YYYY-MM-DD" only if that day really exists (so 31/02 is rejected)
+function makeDate(year, month, day) {
+  var d = new Date(year, month - 1, day);
+  if (d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day) return dateText(d);
+  return null;
+}
+
+function num(value) {
+  var n = Number(value);
+  return isNaN(n) ? 0 : n;
+}
+
+function roundMoney(n) { return Math.round(n * 100) / 100; }
+
+function money(n) {
+  var rounded = Math.round(n);
+  return (rounded < 0 ? "-" : "") + "₹" + Math.abs(rounded).toLocaleString("en-IN");
+}
+
+// part out of whole, as a percent (never divides by zero)
+function percent(part, whole) { return whole > 0 ? part / whole * 100 : 0; }
+
+function pctChange(now, before) { return before > 0 ? (now - before) / before * 100 : 0; }
+
+// Makes text safe to show on the page
+function safe(text) {
+  return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function icon(name) {
+  return '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">' + (icons[name] || "") + "</svg>";
+}
+
+function title(heading, subtitle) { return "<h1>" + heading + '</h1><p class="sub">' + subtitle + "</p>"; }
+
+// A progress bar. It turns red when "over" is true.
+function bar(value, max, over) {
+  var width = Math.min(100, percent(value, max));
+  return '<div class="bar"><div class="' + (over ? "over" : "") + '" style="width:' + width + '%"></div></div>';
+}
+
+function showMessage(text) {
+  $("message").innerHTML = '<div class="toast">' + safe(text) + "</div>";
+  setTimeout(function () { $("message").innerHTML = ""; }, 2200);
+}
+
+function total(list) {
+  var sum = 0;
+  for (var i = 0; i < list.length; i++) sum += list[i].amount;
+  return sum;
+}
+
+function monthExpenses() {
+  var list = [];
+  for (var i = 0; i < data.expenses.length; i++) {
+    if (monthOf(data.expenses[i]) === thisMonth()) list.push(data.expenses[i]);
+  }
+  return list;
+}
+
+function spentIn(category) {
+  var sum = 0;
+  var list = monthExpenses();
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].category === category) sum += list[i].amount;
+  }
+  return sum;
+}
+
+// A list like [["Food", 2400], ["Rent", 15000]] for the categories you spent on this month
+function categoryTotals() {
+  var result = [];
+  for (var i = 0; i < categories.length; i++) {
+    var amount = spentIn(categories[i]);
+    if (amount > 0) result.push([categories[i], amount]);
+  }
+  return result;
+}
+
+function findStock(symbol) {
+  for (var i = 0; i < stocks.length; i++) {
+    if (stocks[i].symbol === symbol) return stocks[i];
+  }
+  return null;
+}
+
+// The stocks you own, as a list of { symbol, qty, avg, stock }
+function holdingsList() {
+  var list = [];
+  for (var symbol in data.holdings) {
+    var stock = findStock(symbol);
+    if (stock) list.push({ symbol: symbol, qty: data.holdings[symbol].qty, avg: data.holdings[symbol].avg, stock: stock });
+  }
+  return list;
+}
+
+function holdingsValue() {
+  var sum = 0;
+  var list = holdingsList();
+  for (var i = 0; i < list.length; i++) sum += list[i].qty * list[i].stock.price;
+  return sum;
+}
+
+function lowest(list) {
+  var result = list[0];
+  for (var i = 1; i < list.length; i++) if (list[i] < result) result = list[i];
+  return result;
+}
+
+function highest(list) {
+  var result = list[0];
+  for (var i = 1; i < list.length; i++) if (list[i] > result) result = list[i];
+  return result;
+}
+
+/* ----- helpers for the dashboard charts ----- */
+
+// Makes a repeatable pretend history that ends at endValue.
+// (A new account has no real history yet, so the demo charts use this.)
+function makeTrend(seed, points, endValue, volatility) {
+  var random = seed;
+  var price = endValue;
+  var values = [];
+  for (var i = 0; i < points; i++) {
+    random = (random * 16807) % 2147483647;
+    values.unshift(price);
+    price = price / (1 + (random / 2147483647 - 0.47) * volatility);
+  }
+  return values;
+}
+
+// A tiny line chart for the Market Watch cards
+function sparkline(values, colour) {
+  var low = lowest(values);
+  var high = highest(values);
+  var points = [];
+  for (var i = 0; i < values.length; i++) {
+    var x = i / (values.length - 1) * 90;
+    var y = 26 - (values[i] - low) / (high - low || 1) * 24;
+    points.push(x.toFixed(1) + "," + y.toFixed(1));
+  }
+  return '<svg viewBox="0 0 90 28" width="100%" height="28" preserveAspectRatio="none">' +
+         '<polyline points="' + points.join(" ") + '" fill="none" stroke="' + colour + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>';
+}
+
+// Coloured donut arcs. slices looks like [{ value: 100, colour: "#f5c542" }, ...]
+function donutArcs(slices, strokeWidth) {
+  var whole = 0;
+  for (var i = 0; i < slices.length; i++) whole += slices[i].value;
+  var offset = 0;
+  var html = "";
+  for (var j = 0; j < slices.length; j++) {
+    var share = percent(slices[j].value, whole);
+    html += '<circle r="15.9" cx="21" cy="21" fill="none" stroke="' + slices[j].colour + '" stroke-width="' + strokeWidth + '"' +
+            ' stroke-dasharray="' + share + " " + (100 - share) + '" stroke-dashoffset="' + (-offset) + '" transform="rotate(-90 21 21)"/>';
+    offset += share;
+  }
+  return html;
+}
+
+// "↑ 5.2% vs last month". For expenses, going up is bad, so call it with upIsGood = false.
+function changePill(change, upIsGood) {
+  var good = (change >= 0) === upIsGood;
+  return '<span class="pill ' + (good ? "good" : "bad") + '">' + (change >= 0 ? "↑" : "↓") + " " + Math.abs(change).toFixed(1) +
+         '%</span> <span class="soft small">vs last month</span>';
+}
+
+// A stat card with a small icon in the corner
+function statCard(label, value, iconName, extra) {
+  return '<div class="card"><div class="stat-top"><span class="soft">' + label + '</span><span class="icon-box">' + icon(iconName) + "</span></div>" +
+         '<div class="big">' + value + "</div><div>" + extra + "</div></div>";
+}
+
+// A plain stat card (no icon)
+function simpleCard(label, value, colourClass) {
+  return '<div class="card"><div class="soft">' + label + '</div><div class="big ' + (colourClass || "") + '">' + value + "</div></div>";
+}
+
+/* =====================================================
+   3. YOUR DATA (saved in this browser)
+   ===================================================== */
+var STORAGE_NAME = "jarvis-full";
+
+function defaultData() {
+  return {
+    loggedIn: false,
+    name: "Guest",
+    email: "",
+    income: 60000,            // monthly income
+    bank: 30000,              // bank balance (changes when you import transactions)
+    bankLimit: 5000,          // alert when the bank balance is this low
+    savingsLimit: 1000,       // alert when savings are this low
+    autoBudget: true,         // the budget follows your spending history
+    budget: 40000,
+    limits: { Food: 8000, Rent: 15000, Transport: 3000, Shopping: 5000, Bills: 4000, Health: 2000, Fun: 3000, Other: 2000 },
+    savingsGoal: { name: "Emergency fund", target: 150000, saved: 42000 },
+    expenses: [               // sample rows, removed when you import real ones
+      { id: 1, title: "Groceries",   amount: 2400,  category: "Food",      date: daysAgo(1),  sample: true },
+      { id: 2, title: "Rent",        amount: 15000, category: "Rent",      date: daysAgo(3),  sample: true },
+      { id: 3, title: "Metro card",  amount: 800,   category: "Transport", date: daysAgo(5),  sample: true },
+      { id: 4, title: "Electricity", amount: 1900,  category: "Bills",     date: daysAgo(8),  sample: true },
+      { id: 5, title: "Movie night", amount: 900,   category: "Fun",       date: daysAgo(12), sample: true },
+      { id: 6, title: "Groceries",   amount: 2100,  category: "Food",      date: daysAgo(35), sample: true },
+      { id: 7, title: "Rent",        amount: 15000, category: "Rent",      date: daysAgo(33), sample: true }
+    ],
+    incomes: [],              // money received (salary, refunds...)
+    seen: {},                 // remembers imported rows so nothing is added twice
+    nextId: 100,
+    cleared: false,           // have the sample rows been removed yet?
+    lastAlerts: 0,
+    syncUrl: "",
+    stockGoals: [],           // each one: { symbol, target, saved }
+    cash: 1000000,            // virtual cash
+    holdings: {},             // for example { TCS: { qty: 10, avg: 3900 } }
+    chat: [{ from: "bot", text: "Hi! I'm JARVIS. Ask me about your spending, budget, savings or stocks." }]
+  };
+}
+
+// Loads what was saved, and fills in anything missing so old saves never break the page
+function loadData() {
+  var fresh = defaultData();
+  var result = defaultData();
+  try {
+    var saved = JSON.parse(localStorage.getItem(STORAGE_NAME));
+    if (saved && typeof saved === "object") {
+      for (var key in saved) result[key] = saved[key];
+      result.limits = Object.assign({}, fresh.limits, saved.limits);
+      result.savingsGoal = Object.assign({}, fresh.savingsGoal, saved.savingsGoal);
+      var listNames = ["expenses", "incomes", "stockGoals", "chat"];
+      for (var i = 0; i < listNames.length; i++) {
+        if (!Array.isArray(result[listNames[i]])) result[listNames[i]] = fresh[listNames[i]];
+      }
+      if (!result.holdings || typeof result.holdings !== "object") result.holdings = {};
+      if (!result.seen || typeof result.seen !== "object") result.seen = {};
+    }
+  } catch (error) {
+    result = fresh;            // damaged save: start fresh
+  }
+  return result;
+}
+
+var data = loadData();
+
+function save() {
+  try { localStorage.setItem(STORAGE_NAME, JSON.stringify(data)); } catch (error) {}
+}
+
+/* =====================================================
+   4. READING TRANSACTIONS (statements and bank SMS)
+   ===================================================== */
+
+// Finds a date like 2026-11-18, 18-11-2026, 18/11/26 or 18 Nov 2026 (day comes first)
+function findDate(text) {
+  var m = text.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return makeDate(+m[1], +m[2], +m[3]);
+
+  m = text.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+  if (m) {
+    var year = +m[3];
+    if (year < 100) year += 2000;
+    return makeDate(year, +m[2], +m[1]);
+  }
+
+  m = text.match(/(\d{1,2})[\s-]([A-Za-z]{3})[a-z]*[\s,-]*(\d{2,4})/);
+  if (m) {
+    var month = monthNames.indexOf(m[2].toLowerCase()) + 1;
+    if (month > 0) {
+      var y = +m[3];
+      if (y < 100) y += 2000;
+      return makeDate(y, month, +m[1]);
+    }
+  }
+  return null;
+}
+
+// Finds an amount written like "Rs 450", "Rs.1,250.50", "INR 99" or "₹300"
+function findAmount(text) {
+  var m = text.match(/(?:₹|rs\.?|inr)\s*([\d,]+(?:\.\d+)?)/i);
+  if (!m) return 0;
+  return roundMoney(parseFloat(m[1].replace(/,/g, "")));
+}
+
+// Finds the shop or person in a bank SMS. Paid money goes "to" someone, received money comes "from" someone.
+function findName(text, isIncome) {
+  var pattern = isIncome
+    ? /(?:\bfrom\b|\bby\b|info:?)\s+([A-Za-z][\w .&@-]{1,30}?)(?=\s+(?:on|ref|upi|via|using|avl|bal|dated)\b|[.,;(]|$)/i
+    : /(?:\bto\b|\bat\b|towards|vpa|info:?)\s+([A-Za-z][\w .&@-]{1,30}?)(?=\s+(?:on|ref|upi|via|using|avl|bal|dated)\b|[.,;(]|$)/i;
+  var m = text.match(pattern);
+  if (m) return m[1].trim();
+  return text.replace(/\s+/g, " ").slice(0, 30);
+}
+
+// Splits one CSV line into cells. A comma inside "quotes" does not split.
+function splitCsvLine(line) {
+  var cells = [];
+  var current = "";
+  var inQuotes = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line.charAt(i);
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === "," && !inQuotes) {
+      cells.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
+// Which column has a header that matches the pattern? Returns -1 if none.
+function findColumn(header, pattern) {
+  for (var i = 0; i < header.length; i++) {
+    if (pattern.test(header[i])) return i;
+  }
+  return -1;
+}
+
+function toAmount(value) {
+  return roundMoney(parseFloat(String(value || "").replace(/[^\d.]/g, "")) || 0);
+}
+
+function guessCategory(name) {
+  for (var i = 0; i < categoryWords.length; i++) {
+    if (categoryWords[i][1].test(name)) return categoryWords[i][0];
+  }
+  return "Other";
+}
+
+// Turns pasted text or a statement file into a list of { date, name, amount, income }
+function parseTransactions(text) {
+  var lines = [];
+  var allLines = text.split(/\r?\n/);
+  for (var i = 0; i < allLines.length; i++) {
+    if (allLines[i].trim() !== "") lines.push(allLines[i]);
+  }
+  if (lines.length === 0) return [];
+
+  var result = [];
+
+  // Is the first line a CSV header (date, description, debit/credit or amount columns)?
+  var header = splitCsvLine(lines[0]);
+  for (var h = 0; h < header.length; h++) header[h] = header[h].toLowerCase();
+  var dateCol = findColumn(header, /date/);
+  var nameCol = findColumn(header, /narration|description|particulars|details|remarks|merchant|payee/);
+  var debitCol = findColumn(header, /debit|withdraw|\bdr\b/);
+  var creditCol = findColumn(header, /credit|deposit|\bcr\b/);
+  var amountCol = findColumn(header, /^amount|txn amount/);
+  var typeCol = findColumn(header, /type|cr\/dr/);
+
+  if (dateCol >= 0 && nameCol >= 0 && (debitCol >= 0 || amountCol >= 0)) {
+    // Bank statement in CSV form
+    for (var r = 1; r < lines.length; r++) {
+      var cells = splitCsvLine(lines[r]);
+      var date = findDate(cells[dateCol] || "");
+      if (!date) continue;
+
+      var amount = 0;
+      var isIncome = false;
+      if (debitCol >= 0 && toAmount(cells[debitCol]) > 0) {
+        amount = toAmount(cells[debitCol]);
+      } else if (creditCol >= 0 && toAmount(cells[creditCol]) > 0) {
+        amount = toAmount(cells[creditCol]);
+        isIncome = true;
+      } else if (amountCol >= 0) {
+        amount = toAmount(cells[amountCol]);
+        isIncome = /cr|credit/i.test(cells[typeCol] || "") || /^\s*\+/.test(cells[amountCol] || "");
+      }
+      if (amount > 0) result.push({ date: date, name: cells[nameCol] || "Payment", amount: amount, income: isIncome });
+    }
+    return result;
+  }
+
+  // Otherwise every line is treated as a bank SMS alert
+  for (var k = 0; k < lines.length; k++) {
+    var line = lines[k];
+    var smsAmount = findAmount(line);
+    if (smsAmount <= 0) continue;
+    var smsIncome = /credited|received|deposit|salary|refund|cashback|\bcr\b/i.test(line) && !/debited/i.test(line);
+    result.push({ date: findDate(line) || daysAgo(0), name: findName(line, smsIncome), amount: smsAmount, income: smsIncome });
+  }
+  return result;
+}
+
+// Adds new rows. Importing the same rows again adds nothing.
+function addTransactions(list) {
+  var valid = [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].amount > 0 && list[i].date) valid.push(list[i]);
+  }
+  if (valid.length === 0) return 0;
+
+  // On the first real import, remove the sample rows
+  if (!data.cleared) {
+    var kept = [];
+    for (var s = 0; s < data.expenses.length; s++) {
+      if (!data.expenses[s].sample) kept.push(data.expenses[s]);
+    }
+    data.expenses = kept;
+    data.cleared = true;
+  }
+
+  var added = 0;
+  var counts = {};
+  for (var j = 0; j < valid.length; j++) {
+    var t = valid[j];
+    var base = (t.income ? "in" : "out") + "|" + t.date + "|" + t.amount + "|" + t.name.toLowerCase();
+    counts[base] = (counts[base] || 0) + 1;          // two real payments of the same size on one day are both kept
+    var key = base + "|" + counts[base];
+    if (data.seen[key]) continue;                    // already imported before
+    data.seen[key] = true;
+
+    data.nextId = data.nextId + 1;
+    var row = { id: data.nextId, title: t.name.slice(0, 40), amount: t.amount, date: t.date };
+    if (t.income) {
+      data.incomes.push(row);
+      data.bank = data.bank + t.amount;
+    } else {
+      row.category = guessCategory(t.name);
+      data.expenses.push(row);
+      data.bank = data.bank - t.amount;
+    }
+    added = added + 1;
+  }
+  afterChange();
+  return added;
+}
+
+// Sets the budget from your own history: monthly average plus 10%, rounded up to the next 500
+function applyAutoBudget() {
+  var months = {};
+  for (var i = 0; i < data.expenses.length; i++) months[monthOf(data.expenses[i])] = true;
+  var monthCount = Object.keys(months).length || 1;
+
+  var sumOfLimits = 0;
+  for (var c = 0; c < categories.length; c++) {
+    var category = categories[c];
+    var spentTotal = 0;
+    for (var e = 0; e < data.expenses.length; e++) {
+      if (data.expenses[e].category === category) spentTotal += data.expenses[e].amount;
+    }
+    var average = spentTotal / monthCount;
+    data.limits[category] = average > 0 ? Math.max(500, Math.ceil(average * 1.1 / 500) * 500) : 0;
+    sumOfLimits += data.limits[category];
+  }
+  if (sumOfLimits > 0) data.budget = sumOfLimits;
+}
+
+// Runs after the list of transactions changes
+function afterChange() {
+  var incomeRows = [];
+  for (var i = 0; i < data.incomes.length; i++) {
+    if (monthOf(data.incomes[i]) === thisMonth()) incomeRows.push(data.incomes[i]);
+  }
+  if (incomeRows.length > 0) data.income = total(incomeRows);
+
+  if (data.autoBudget) applyAutoBudget();
+  save();
+  render(true);
+
+  var count = makeAlerts().length;
+  if (count > data.lastAlerts) showMessage("New alert: " + count + " active alert" + (count > 1 ? "s" : ""));
+  data.lastAlerts = count;
+  save();
+}
+
+/* =====================================================
+   5. ALERTS
+   ===================================================== */
+function makeAlerts() {
+  var list = [];
+  function add(level, heading, text) { list.push({ level: level, title: heading, text: text }); }
+
+  // Bank balance
+  if (data.bank <= 0) {
+    add("urgent", "No money left in your bank account", "Your balance is " + money(data.bank) + ". Add money or hold off on spending.");
+  } else if (data.bank <= data.bankLimit) {
+    add("warning", "Bank balance is low", "Your balance is " + money(data.bank) + ", at or below your " + money(data.bankLimit) + " alert level.");
+  }
+
+  // Savings
+  var saved = data.savingsGoal.saved;
+  if (saved <= 0) {
+    add("urgent", "No savings left", "Your savings are at " + money(saved) + ".");
+  } else if (saved <= data.savingsLimit) {
+    add("warning", "Savings are running low", "Your savings are " + money(saved) + ", at or below your " + money(data.savingsLimit) + " alert level.");
+  }
+
+  // Each category
+  for (var i = 0; i < categories.length; i++) {
+    var category = categories[i];
+    var spent = roundMoney(spentIn(category));
+    var limit = roundMoney(data.limits[category] || 0);
+    if (spent > 0 && spent > limit) {
+      add("urgent", category + " limit crossed", "You spent " + money(spent) + " against a limit of " + money(limit) + ", over by " + money(spent - limit) + ".");
+    } else if (spent > 0 && spent === limit) {
+      add("warning", category + " limit fully used", "You have used all " + money(limit) + " of your " + category + " budget.");
+    }
+  }
+
+  // The whole month
+  var spentTotal = roundMoney(total(monthExpenses()));
+  var budget = roundMoney(data.budget);
+  if (budget > 0 && spentTotal > budget) {
+    add("urgent", "Monthly budget crossed", "You spent " + money(spentTotal) + " against a budget of " + money(budget) + ".");
+  } else if (budget > 0 && spentTotal === budget) {
+    add("warning", "Monthly budget fully used", "You have used all " + money(budget) + " of your monthly budget.");
+  }
+
+  // Urgent ones first
+  list.sort(function (a, b) {
+    var first = a.level === "urgent" ? 0 : 1;
+    var second = b.level === "urgent" ? 0 : 1;
+    return first - second;
+  });
+  return list;
+}
+
+/* =====================================================
+   6. THE PAGES (each one returns the HTML to show)
+   ===================================================== */
+var pageFunctions = {};
+var chartDays = 30;          // range of the dashboard chart (7, 30, 90 or 120)
+var compareA = "TCS";        // the two stocks in the advisor
+var compareB = "INFY";
+
+/* ---------- Home ---------- */
+pageFunctions.home = function () {
+  var info = {
+    dashboard: "Income, expenses, savings and investments at a glance.",
+    transactions: "Import payments and sort them automatically.",
+    analytics: "Spending charts and monthly reports.",
+    budget: "Monthly budget and savings goals.",
+    assistant: "Ask questions about your money.",
+    profile: "Your details and preferences.",
+    explorer: "Browse Indian stocks from NSE and BSE.",
+    savings: "Save towards stock investment goals.",
+    advisor: "Compare two stocks side by side.",
+    portfolio: "Practise with ₹10,00,000 of virtual money.",
+    alerts: "Warnings when limits or balances run low."
+  };
+  var cards = "";
+  for (var i = 2; i < pages.length; i++) {
+    var id = pages[i][0];
+    cards += '<a class="card" href="#' + id + '"><div class="big-icon">' + icon(id) + "</div><h2>" + pages[i][1] +
+             '</h2><span class="soft">' + info[id] + "</span></a>";
+  }
+  return '<section class="hero"><h1>Know where every rupee goes.</h1>' +
+         "<p>Track spending, plan budgets, save towards stocks and practise investing with virtual money. All in one calm, dark workspace.</p>" +
+         "<button onclick=\"goTo('auth')\">Get started</button> " +
+         "<button class=\"plain\" onclick=\"goTo('dashboard')\">See the dashboard</button></section>" +
+         '<div class="grid space">' + cards + "</div>";
+};
+
+/* ---------- Login / Register (demo only) ---------- */
+pageFunctions.auth = function () {
+  if (data.loggedIn) {
+    return title("Welcome back, " + safe(data.name), "You are signed in on this device.") +
+           '<button class="plain" onclick="logout()">Log out</button>';
+  }
+  return title("Login or register", "Create an account to keep your data on this device.") +
+    '<div class="grid two">' +
+    '<div class="card"><h2>Login</h2><label for="loginEmail">Email</label><input id="loginEmail" type="email">' +
+    '<label for="loginPass">Password</label><input id="loginPass" type="password"><button onclick="login()">Login</button></div>' +
+    '<div class="card"><h2>Register</h2><label for="regName">Name</label><input id="regName">' +
+    '<label for="regEmail">Email</label><input id="regEmail" type="email">' +
+    '<label for="regPass">Password</label><input id="regPass" type="password"><button onclick="register()">Create account</button></div></div>' +
+    '<p class="soft">Demo note: sign-in is simulated and stays in this browser only. A real site needs a server for secure authentication.</p>';
+};
+
+/* ---------- Dashboard ---------- */
+pageFunctions.dashboard = function () {
+  var spent = total(monthExpenses());
+  var income = data.income;
+  var savings = Math.max(0, income - spent);
+
+  // Profit or loss on the stocks you own
+  var holdings = holdingsList();
+  var profit = 0;
+  var cost = 0;
+  for (var i = 0; i < holdings.length; i++) {
+    profit += (holdings[i].stock.price - holdings[i].avg) * holdings[i].qty;
+    cost += holdings[i].avg * holdings[i].qty;
+  }
+  var gainPercent = percent(profit, cost);
+
+  var goalsSaved = 0;
+  for (var g = 0; g < data.stockGoals.length; g++) goalsSaved += data.stockGoals[g].saved;
+  var investments = holdingsValue() + goalsSaved;
+
+  // Last month, for the "vs last month" labels
+  var lastSpent = 0;
+  for (var e = 0; e < data.expenses.length; e++) {
+    if (monthOf(data.expenses[e]) === lastMonth()) lastSpent += data.expenses[e].amount;
+  }
+  var lastSavings = Math.max(0, income - lastSpent);
+
+  // Alert banner (only when there is something to say)
+  var banner = "";
+  var alerts = makeAlerts();
+  if (alerts.length > 0) {
+    var anyUrgent = false;
+    for (var a = 0; a < alerts.length; a++) if (alerts[a].level === "urgent") anyUrgent = true;
+    banner = '<a class="alert ' + (anyUrgent ? "urgent" : "warning") + '" href="#alerts"><span class="icon-box">' + icon("alerts") + "</span>" +
+             "<div><b>" + alerts.length + " active alert" + (alerts.length > 1 ? "s" : "") + '</b><div class="soft">' + safe(alerts[0].title) +
+             (alerts.length > 1 ? " and more" : "") + ". Tap to view.</div></div></a>";
+  }
+
+  // The four cards at the top
+  var topCards = '<div class="grid">' +
+    statCard("Income", money(income), "savings", '<span class="soft small">Monthly, from your profile</span>') +
+    statCard("Expenses", money(spent), "transactions", changePill(pctChange(spent, lastSpent), false)) +
+    statCard("Savings", money(savings), "portfolio", changePill(pctChange(savings, lastSavings), true)) +
+    statCard("Investments", money(investments), "analytics",
+             '<span class="pill ' + (profit >= 0 ? "good" : "bad") + '">' + (profit >= 0 ? "↑" : "↓") + " " + Math.abs(gainPercent).toFixed(1) +
+             '%</span> <span class="soft small">portfolio gain</span>') + "</div>";
+
+  // Performance chart (illustrative history)
+  var totalValue = data.cash + holdingsValue();
+  var trend = makeTrend(7, chartDays, totalValue, 0.012);
+  var low = lowest(trend);
+  var high = highest(trend);
+  var width = 600;
+  var height = 180;
+  var points = [];
+  for (var t = 0; t < trend.length; t++) {
+    var x = t / (trend.length - 1) * width;
+    var y = height - 6 - (trend[t] - low) / (high - low || 1) * (height - 12);
+    points.push(x.toFixed(1) + "," + y.toFixed(1));
+  }
+  var line = points.join(" ");
+  var trendChange = pctChange(trend[trend.length - 1], trend[0]);
+
+  var rangeButtons = "";
+  var ranges = [["1W", 7], ["1M", 30], ["3M", 90], ["1Y", 120]];
+  for (var r = 0; r < ranges.length; r++) {
+    rangeButtons += '<button class="chip ' + (chartDays === ranges[r][1] ? "active" : "") + '" onclick="setChartDays(' + ranges[r][1] + ')">' + ranges[r][0] + "</button> ";
+  }
+
+  // Asset allocation donut
+  var slices = [
+    { label: "Stocks",       value: holdingsValue(),        colour: "#f5c542" },
+    { label: "Virtual cash", value: data.cash,              colour: "#7de6ff" },
+    { label: "Stock goals",  value: goalsSaved,             colour: "#ef4444" },
+    { label: "Savings goal", value: data.savingsGoal.saved, colour: "#fb923c" }
+  ];
+  var sliceTotal = 0;
+  for (var s = 0; s < slices.length; s++) sliceTotal += slices[s].value;
+  var legend = "";
+  for (var l = 0; l < slices.length; l++) {
+    legend += '<div class="legend-row"><span><i class="dot" style="background:' + slices[l].colour + '"></i>' + slices[l].label + "</span>" +
+              '<span class="soft">' + percent(slices[l].value, sliceTotal).toFixed(1) + "%</span><b>" + money(slices[l].value) + "</b></div>";
+  }
+
+  // Market watch: the first 5 stocks with a small trend line
+  var marketCards = "";
+  for (var m = 0; m < 5; m++) {
+    var stock = stocks[m];
+    var colour = stock.change >= 0 ? "#4ade80" : "#f87171";
+    marketCards += '<div class="market-card"><b>' + stock.symbol + '</b><div class="soft small">' + stock.name + "</div>" +
+      sparkline(makeTrend(Math.round(stock.price) % 997 + 1, 24, stock.price, 0.02), colour) +
+      "<div>" + money(stock.price) + ' <span class="' + (stock.change >= 0 ? "good" : "bad") + ' small">' + (stock.change >= 0 ? "↑" : "↓") + " " + Math.abs(stock.change) + "%</span></div></div>";
+  }
+
+  // Recent transactions (newest 4 expenses)
+  var sorted = data.expenses.slice().sort(function (a, b) { return b.date.localeCompare(a.date); });
+  var recent = "";
+  for (var n = 0; n < sorted.length && n < 4; n++) {
+    recent += '<div class="list-item"><span class="avatar">' + safe((sorted[n].title.charAt(0) || "?").toUpperCase()) + "</span>" +
+              "<div><b>" + safe(sorted[n].title) + '</b><div class="soft small">' + sorted[n].date + " · " + sorted[n].category + "</div></div>" +
+              '<b class="bad">-' + money(sorted[n].amount) + "</b></div>";
+  }
+  if (recent === "") recent = '<p class="soft">No expenses yet.</p>';
+
+  // Top holdings (the biggest 5)
+  holdings.sort(function (a, b) { return b.qty * b.stock.price - a.qty * a.stock.price; });
+  var topHoldings = "";
+  for (var h = 0; h < holdings.length && h < 5; h++) {
+    var value = holdings[h].qty * holdings[h].stock.price;
+    topHoldings += '<div class="space"><div class="legend-row" style="padding:0 0 4px"><b>' + holdings[h].symbol + '</b><span class="soft">' +
+                   percent(value, holdingsValue()).toFixed(1) + "%</span><b>" + money(value) + "</b></div>" + bar(value, holdingsValue(), false) + "</div>";
+  }
+  if (topHoldings === "") {
+    topHoldings = '<p class="soft">No holdings yet. Buy a stock in the Virtual Portfolio.</p><button class="small" onclick="goTo(\'portfolio\')">Open portfolio</button>';
+  }
+
+  // Upcoming
+  var upcomingList = [
+    ["Month ends", "In " + daysLeftInMonth() + " days", "dashboard"],
+    ["Budget left", money(Math.max(0, data.budget - spent)), "budget"]
+  ];
+  for (var u = 0; u < data.stockGoals.length && u < 2; u++) {
+    var goal = data.stockGoals[u];
+    upcomingList.push([goal.symbol + " goal", money(Math.max(0, goal.target - goal.saved)) + " to go", "savings"]);
+  }
+  var upcoming = "";
+  for (var p = 0; p < upcomingList.length; p++) {
+    upcoming += '<div class="list-item"><span class="icon-box">' + icon(upcomingList[p][2]) + "</span><div><b>" + upcomingList[p][0] +
+                '</b><div class="soft small">' + upcomingList[p][1] + "</div></div></div>";
+  }
+
+  return banner +
+    title("Dashboard Overview", "Welcome back, " + safe(data.name) + "! Here’s what’s happening with your money today.") +
+    topCards +
+    '<div class="wide-and-narrow">' +
+      '<div class="card"><div class="section-head"><h2>Portfolio performance</h2><div>' + rangeButtons + "</div></div>" +
+        '<div class="big">' + money(totalValue) + ' <span class="pill ' + (trendChange >= 0 ? "good" : "bad") + '">' + (trendChange >= 0 ? "↑" : "↓") + " " + Math.abs(trendChange).toFixed(2) + "%</span></div>" +
+        '<svg viewBox="0 0 ' + width + " " + height + '" preserveAspectRatio="none" style="width:100%;height:190px">' +
+          '<defs><linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5c542" stop-opacity=".35"/>' +
+          '<stop offset="1" stop-color="#f5c542" stop-opacity="0"/></linearGradient></defs>' +
+          '<polygon points="0,' + height + " " + line + " " + width + "," + height + '" fill="url(#areaFill)"/>' +
+          '<polyline points="' + line + '" fill="none" stroke="#f5c542" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>' +
+        '<p class="soft small" style="margin:6px 0 0">Illustrative trend based on sample data.</p></div>' +
+      '<div class="card"><h2>Asset allocation</h2><div style="display:flex;justify-content:center;margin:6px 0 10px">' +
+        '<svg viewBox="0 0 42 42" width="150" height="150">' + donutArcs(slices, 5) +
+        '<text x="21" y="21.5" text-anchor="middle" fill="#fff" font-size="3.4" font-weight="700">' + money(sliceTotal) + "</text>" +
+        '<text x="21" y="26" text-anchor="middle" fill="#d6c2a8" font-size="2.4">Total value</text></svg></div>' + legend + "</div>" +
+    "</div>" +
+    '<div class="card space"><div class="section-head"><h2>Market watch</h2><span class="soft small">Sample data</span></div><div class="market-row">' + marketCards + "</div></div>" +
+    '<div class="grid three">' +
+      '<div class="card"><h2>Recent transactions</h2>' + recent + "</div>" +
+      '<div class="card"><h2>Top holdings</h2>' + topHoldings + "</div>" +
+      '<div class="card"><h2>Upcoming</h2>' + upcoming + "</div>" +
+    "</div>";
+};
+
+/* ---------- Transactions ---------- */
+
+// The three blocks at the top of the Transactions page
+function transactionBlocks() {
+  // Join expenses and income, newest first
+  var all = [];
+  for (var i = 0; i < data.expenses.length; i++) {
+    var e = data.expenses[i];
+    all.push({ date: e.date, title: e.title, amount: e.amount, category: e.category, income: false });
+  }
+  for (var j = 0; j < data.incomes.length; j++) {
+    var inc = data.incomes[j];
+    all.push({ date: inc.date, title: inc.title, amount: inc.amount, category: "Income", income: true });
+  }
+  all.sort(function (a, b) { return b.date.localeCompare(a.date); });
+
+  var recent = "";
+  for (var r = 0; r < all.length && r < 4; r++) {
+    var t = all[r];
+    recent += '<div class="list-item"><span class="avatar">' + safe((t.title.charAt(0) || "?").toUpperCase()) + "</span>" +
+              "<div><b>" + safe(t.title) + '</b><div class="soft small">' + t.date + " · " + t.category + "</div></div>" +
+              '<b class="' + (t.income ? "good" : "") + '">' + (t.income ? "+" : "-") + money(t.amount) + "</b></div>";
+  }
+  if (recent === "") recent = '<p class="soft">No transactions yet.</p>';
+
+  // Top spending this month
+  var monthTotal = total(monthExpenses());
+  var cats = categoryTotals().sort(function (a, b) { return b[1] - a[1]; });
+  var topSpending = "";
+  for (var c = 0; c < cats.length && c < 5; c++) {
+    topSpending += '<div class="space"><div class="legend-row" style="padding:0 0 4px"><b>' + cats[c][0] + '</b><span class="soft">' +
+                   percent(cats[c][1], monthTotal).toFixed(1) + "%</span><b>" + money(cats[c][1]) + "</b></div>" + bar(cats[c][1], monthTotal, false) + "</div>";
+  }
+  if (topSpending === "") topSpending = '<p class="soft">No spending yet this month.</p>';
+
+  // Upcoming
+  var incomeThisMonth = 0;
+  for (var k = 0; k < data.incomes.length; k++) {
+    if (monthOf(data.incomes[k]) === thisMonth()) incomeThisMonth += data.incomes[k].amount;
+  }
+  var items = [
+    ["Month ends", "In " + daysLeftInMonth() + " days", "dashboard"],
+    ["Budget left", money(Math.max(0, data.budget - monthTotal)), "budget"],
+    ["Income this month", money(incomeThisMonth), "savings"]
+  ];
+  var upcoming = "";
+  for (var u = 0; u < items.length; u++) {
+    upcoming += '<div class="list-item"><span class="icon-box">' + icon(items[u][2]) + "</span><div><b>" + items[u][0] +
+                '</b><div class="soft small">' + items[u][1] + "</div></div></div>";
+  }
+
+  return '<div class="grid three">' +
+    '<div class="card"><div class="section-head"><h2>Recent Transactions</h2><button class="pill-button" onclick="scrollToList()">View All</button></div>' + recent + "</div>" +
+    '<div class="card"><div class="section-head"><h2>Top Spending</h2><button class="pill-button" onclick="goTo(\'analytics\')">View All</button></div>' + topSpending + "</div>" +
+    '<div class="card"><div class="section-head"><h2>Upcoming</h2><button class="pill-button" onclick="goTo(\'budget\')">View Budget</button></div>' + upcoming + "</div></div>";
+}
+
+function categorySelect(id, selected) {
+  var html = '<select style="margin:0" onchange="changeCategory(' + id + ', this.value)">';
+  for (var i = 0; i < categories.length; i++) {
+    html += "<option" + (categories[i] === selected ? " selected" : "") + ">" + categories[i] + "</option>";
+  }
+  return html + "</select>";
+}
+
+pageFunctions.transactions = function () {
+  // The full list: expenses and income together, newest first
+  var all = [];
+  for (var i = 0; i < data.expenses.length; i++) {
+    var e = data.expenses[i];
+    all.push({ id: e.id, date: e.date, title: e.title, amount: e.amount, category: e.category, income: false });
+  }
+  for (var j = 0; j < data.incomes.length; j++) {
+    var inc = data.incomes[j];
+    all.push({ id: inc.id, date: inc.date, title: inc.title, amount: inc.amount, category: "", income: true });
+  }
+  all.sort(function (a, b) { return b.date.localeCompare(a.date); });
+
+  var rows = "";
+  for (var r = 0; r < all.length; r++) {
+    var t = all[r];
+    rows += "<tr><td>" + t.date + "</td><td>" + safe(t.title) + "</td><td>" +
+            (t.income ? '<span class="tag">Income</span>' : categorySelect(t.id, t.category)) + "</td>" +
+            '<td class="right ' + (t.income ? "good" : "bad") + '">' + (t.income ? "+" : "-") + money(t.amount) + "</td>" +
+            '<td class="right"><button class="plain small" onclick="removeTransaction(' + t.id + ", " + t.income + ')">Remove</button></td></tr>';
+  }
+  if (rows === "") rows = '<tr><td colspan="5" class="soft">No transactions yet. Import a statement or paste your bank alerts above.</td></tr>';
+
+  return title("Transactions", "Bring in your payments once, or sync them automatically. Categories, budgets and charts update on their own.") +
+    transactionBlocks() +
+    '<div class="grid two space">' +
+      '<div class="card"><h2>Import statement or messages</h2>' +
+      '<p class="soft">Upload a bank or UPI statement (CSV or text), or paste bank SMS alerts. JARVIS reads the amount, date and merchant, then sorts each payment into a category.</p>' +
+      '<label for="statementFile">Statement file</label><input id="statementFile" type="file" accept=".csv,.txt,.tsv" onchange="importFile(this)">' +
+      '<label for="pasteBox">Or paste statement lines or SMS alerts</label>' +
+      '<textarea id="pasteBox" rows="4" placeholder="Rs 450 debited from A/C XX1234 on 18-11-2026 UPI to Swiggy"></textarea>' +
+      '<button onclick="importPasted()">Import</button></div>' +
+      '<div class="card"><h2>Auto-sync</h2>' +
+      '<p class="soft">Connect a service that returns your transactions as JSON, such as your own server or a bank data provider. JARVIS then checks it every 5 minutes. This works when the page runs on your own computer or website.</p>' +
+      '<label for="syncUrl">Sync URL</label><input id="syncUrl" value="' + safe(data.syncUrl) + '" placeholder="https://your-server.com/transactions">' +
+      '<p class="soft small">Each item: date, description, amount, type (debit or credit).</p>' +
+      '<button onclick="saveSyncUrl()">Save and sync</button></div></div>' +
+    '<div class="card scroll space" id="fullList"><table><tr><th>Date</th><th>Description</th><th>Category</th><th class="right">Amount</th><th></th></tr>' + rows + "</table></div>";
+};
+
+/* ---------- Analytics ---------- */
+pageFunctions.analytics = function () {
+  var colours = ["#f5c542", "#ef4444", "#60a5fa", "#4ade80", "#a78bfa", "#fb923c", "#22d3ee", "#94a3b8"];
+  var cats = categoryTotals();
+  var monthTotal = total(monthExpenses());
+
+  var slices = [];
+  var legend = "";
+  var biggest = "none yet";
+  var biggestAmount = 0;
+  for (var i = 0; i < cats.length; i++) {
+    var colour = colours[categories.indexOf(cats[i][0])];
+    slices.push({ value: cats[i][1], colour: colour });
+    legend += '<div><span style="color:' + colour + '">●</span> ' + cats[i][0] + " <b>" + money(cats[i][1]) + "</b></div>";
+    if (cats[i][1] > biggestAmount) { biggestAmount = cats[i][1]; biggest = cats[i][0]; }
+  }
+  if (legend === "") legend = '<span class="soft">No spending this month.</span>';
+  var donut = donutArcs(slices, 6);
+  if (donut === "") donut = '<circle r="15.9" cx="21" cy="21" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="6"/>';
+
+  // Totals for each month (the last 6)
+  var totals = {};
+  for (var e = 0; e < data.expenses.length; e++) {
+    var month = monthOf(data.expenses[e]);
+    totals[month] = (totals[month] || 0) + data.expenses[e].amount;
+  }
+  var months = Object.keys(totals).sort().slice(-6);
+  var highestMonth = 1;
+  for (var m = 0; m < months.length; m++) if (totals[months[m]] > highestMonth) highestMonth = totals[months[m]];
+  var monthBars = "";
+  for (var n = 0; n < months.length; n++) {
+    monthBars += '<div class="space"><div class="line"><span>' + months[n] + "</span><b>" + money(totals[months[n]]) + "</b></div>" + bar(totals[months[n]], highestMonth, false) + "</div>";
+  }
+  if (monthBars === "") monthBars = '<p class="soft">No spending history yet.</p>';
+
+  var savingsRate = Math.max(0, Math.round(percent(data.income - monthTotal, data.income)));
+  var average = data.expenses.length > 0 ? total(data.expenses) / data.expenses.length : 0;
+
+  return title("Analytics", "Where your money goes, and how it moves month to month.") +
+    '<div class="grid two">' +
+      '<div class="card"><h2>This month by category</h2><div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">' +
+      '<svg viewBox="0 0 42 42" width="170" height="170" role="img" aria-label="Spending by category">' + donut + "</svg><div>" + legend + "</div></div></div>" +
+      '<div class="card"><h2>Monthly totals</h2>' + monthBars + "</div></div>" +
+    '<div class="card space"><h2>Report</h2><p class="soft">Biggest category: <b style="color:#fff">' + biggest + "</b>. Savings rate this month: <b style=\"color:#fff\">" +
+    savingsRate + '%</b>. Average expense: <b style="color:#fff">' + money(average) + "</b>.</p></div>";
+};
+
+/* ---------- Budget planner ---------- */
+pageFunctions.budget = function () {
+  var spent = total(monthExpenses());
+  var goal = data.savingsGoal;
+  var status = spent > data.budget
+    ? '<span class="bad">Over by ' + money(spent - data.budget) + "</span>"
+    : '<span class="good">' + money(data.budget - spent) + " left</span>";
+
+  var limitBoxes = "";
+  for (var i = 0; i < categories.length; i++) {
+    var category = categories[i];
+    var spentHere = spentIn(category);
+    var limit = data.limits[category] || 0;
+    limitBoxes += '<div class="card"><label for="limit-' + category + '">' + category + ": " + money(spentHere) + ' of</label>' +
+      '<input id="limit-' + category + '" type="number" min="0" value="' + limit + '" onchange="setLimit(\'' + category + "', this.value)\">" +
+      bar(spentHere, limit, spentHere > limit) + "</div>";
+  }
+
+  var autoText = data.autoBudget
+    ? "Your monthly budget and category limits follow your spending history (monthly average plus 10%). Import or sync more transactions and they update on their own."
+    : "Automatic budgeting is off, so you can type your own limits below.";
+
+  return title("Budget planner", "Budgets are set automatically from your transactions. You can still adjust them.") +
+    '<div class="card"><div class="section-head"><h2>Automatic budget</h2>' +
+    '<label style="display:flex;align-items:center;margin:0"><input type="checkbox" ' + (data.autoBudget ? "checked" : "") + ' onchange="setAutoBudget(this.checked)"> Set from my transactions</label></div>' +
+    '<p class="soft" style="margin:0">' + autoText + "</p></div>" +
+    '<div class="grid two space">' +
+      '<div class="card"><h2>Monthly budget</h2><label for="budgetInput">Budget (₹)</label>' +
+      '<input id="budgetInput" type="number" min="0" value="' + data.budget + '" onchange="setBudget(this.value)">' +
+      '<p class="soft">Spent ' + money(spent) + ". " + status + "</p>" + bar(spent, data.budget, spent > data.budget) + "</div>" +
+      '<div class="card"><h2>Savings goal</h2><label for="goalName">Goal</label>' +
+      '<input id="goalName" value="' + safe(goal.name) + '" onchange="setGoal(\'name\', this.value)">' +
+      '<label for="goalTarget">Target (₹)</label><input id="goalTarget" type="number" min="1" value="' + goal.target + '" onchange="setGoal(\'target\', this.value)">' +
+      '<label for="goalSaved">Saved so far (₹)</label><input id="goalSaved" type="number" min="0" value="' + goal.saved + '" onchange="setGoal(\'saved\', this.value)">' +
+      bar(goal.saved, goal.target, false) + '<p class="soft">' + Math.round(percent(goal.saved, goal.target)) + "% of " + money(goal.target) + "</p></div></div>" +
+    '<div class="space"><h2>Category limits</h2><div class="grid">' + limitBoxes + "</div></div>";
+};
+
+/* ---------- AI assistant ---------- */
+pageFunctions.assistant = function () {
+  var questions = ["How much did I spend?", "Can I save more?", "Am I within budget?", "Which stock should I start with?"];
+  var chips = "";
+  for (var i = 0; i < questions.length; i++) {
+    chips += '<button class="chip" onclick="ask(\'' + questions[i] + "')\">" + questions[i] + "</button>";
+  }
+  var messages = "";
+  for (var j = 0; j < data.chat.length; j++) {
+    messages += '<div class="msg ' + (data.chat[j].from === "me" ? "me" : "") + '">' + safe(data.chat[j].text) + "</div>";
+  }
+  return title("AI assistant", "Ask about your spending, budget, savings or stocks. Answers use your own numbers.") +
+    '<div class="card"><div class="chips">' + chips + '</div><div class="chat" id="chat">' + messages + "</div>" +
+    '<div style="display:flex;gap:8px"><input id="question" style="margin:0" placeholder="Type your question" aria-label="Question" onkeydown="if(event.key===\'Enter\') ask()">' +
+    '<button onclick="ask()">Send</button></div></div>';
+};
+
+/* ---------- Profile settings ---------- */
+pageFunctions.profile = function () {
+  return title("Profile settings", "Your details and preferences.") +
+    '<div class="card"><div class="grid">' +
+    '<div><label for="profName">Name</label><input id="profName" value="' + safe(data.name) + '"></div>' +
+    '<div><label for="profEmail">Email</label><input id="profEmail" type="email" value="' + safe(data.email) + '"></div>' +
+    '<div><label for="profIncome">Monthly income (₹)</label><input id="profIncome" type="number" min="0" value="' + data.income + '"></div></div>' +
+    '<button onclick="saveProfile()">Save profile</button> <button class="plain" onclick="resetAll()">Reset all data</button></div>';
+};
+
+/* ---------- Stock explorer ---------- */
+
+// The stock table is built by its own function, so typing in the search box redraws only the table
+function stockTable(search) {
+  search = search.toLowerCase();
+  var rows = "";
+  for (var i = 0; i < stocks.length; i++) {
+    var s = stocks[i];
+    if ((s.symbol + s.name + s.sector).toLowerCase().indexOf(search) < 0) continue;
+    rows += "<tr><td><b>" + s.symbol + '</b><div class="soft">' + s.name + '</div></td><td><span class="tag">' + s.sector + "</span></td>" +
+            '<td class="right">' + money(s.price) + '</td><td class="right ' + (s.change >= 0 ? "good" : "bad") + '">' +
+            (s.change >= 0 ? "↑" : "↓") + " " + Math.abs(s.change) + "%</td>" +
+            '<td class="right"><button class="plain small" onclick="startCompare(\'' + s.symbol + "')\">Compare</button> " +
+            "<button class=\"small\" onclick=\"goTo('portfolio')\">Trade</button></td></tr>";
+  }
+  if (rows === "") rows = '<tr><td colspan="5" class="soft">No stocks match your search.</td></tr>';
+  return '<table><tr><th>Stock</th><th>Sector</th><th class="right">Price</th><th class="right">Today</th><th></th></tr>' + rows + "</table>";
+}
+
+pageFunctions.explorer = function () {
+  return title("Stock explorer", "Popular NSE and BSE stocks. Prices are illustrative sample data, not live quotes.") +
+    '<label for="search">Search</label><input id="search" placeholder="Name, symbol or sector" onkeyup="showStocks()">' +
+    '<div class="card scroll" id="results">' + stockTable("") + "</div>";
+};
+
+/* ---------- Stock savings ---------- */
+pageFunctions.savings = function () {
+  var options = "";
+  for (var i = 0; i < stocks.length; i++) options += "<option>" + stocks[i].symbol + "</option>";
+
+  var cards = "";
+  for (var j = 0; j < data.stockGoals.length; j++) {
+    var goal = data.stockGoals[j];
+    var stock = findStock(goal.symbol);
+    if (!stock) continue;
+    cards += '<div class="card"><h2>' + goal.symbol + ' <span class="soft" style="font-weight:normal">' + money(stock.price) + " per share</span></h2>" +
+      bar(goal.saved, goal.target, false) +
+      '<p class="soft">' + money(goal.saved) + " of " + money(goal.target) + ". Enough for " + (goal.saved / stock.price).toFixed(1) + " shares.</p>" +
+      '<div style="display:flex;gap:8px"><input id="deposit' + j + '" type="number" min="0" style="margin:0" placeholder="Amount (₹)" aria-label="Deposit amount">' +
+      '<button class="small" onclick="addToGoal(' + j + ')">Add</button> <button class="plain small" onclick="removeGoal(' + j + ')">Remove</button></div></div>';
+  }
+  if (cards === "") cards = '<p class="soft">No goals yet. Pick a stock above.</p>';
+
+  return title("Stock savings", "Save a little at a time towards the stock you want to buy.") +
+    '<div class="card"><h2>New stock goal</h2><div class="grid">' +
+    '<div><label for="goalStock">Stock</label><select id="goalStock">' + options + "</select></div>" +
+    '<div><label for="goalAmount">Target (₹)</label><input id="goalAmount" type="number" min="1" value="25000"></div></div>' +
+    '<button onclick="addStockGoal()">Create goal</button></div>' +
+    '<div class="grid two space">' + cards + "</div>";
+};
+
+/* ---------- AI stock advisor ---------- */
+
+// A simple educational score out of 100
+function stockScore(s) {
+  var score = 50 + s.change * 5;
+  if (s.pe > 40) score -= 10;
+  if (s.risk === "High") score -= 12;
+  if (s.risk === "Medium") score -= 5;
+  if (s.oneYear > 20) score += 10;
+  else if (s.oneYear > 12) score += 5;
+  return Math.round(score);
+}
+
+pageFunctions.advisor = function () {
+  var first = findStock(compareA) || stocks[0];
+  var second = findStock(compareB) || stocks[1];
+  var firstScore = stockScore(first);
+  var secondScore = stockScore(second);
+  var winner = firstScore >= secondScore ? first : second;
+
+  function picker(position, selected) {
+    var html = '<select aria-label="Stock ' + (position + 1) + '" onchange="setCompare(' + position + ', this.value)">';
+    for (var i = 0; i < stocks.length; i++) {
+      html += "<option" + (stocks[i].symbol === selected ? " selected" : "") + ">" + stocks[i].symbol + "</option>";
+    }
+    return html + "</select>";
+  }
+  function row(label, valueA, valueB) {
+    return '<tr><td class="soft">' + label + "</td><td>" + valueA + "</td><td>" + valueB + "</td></tr>";
+  }
+
+  var summary;
+  if (first.symbol === second.symbol) {
+    summary = "Pick two different stocks to compare.";
+  } else {
+    summary = winner.symbol + " scores higher (" + Math.max(firstScore, secondScore) + " vs " + Math.min(firstScore, secondScore) +
+              ") on a simple mix of momentum, valuation, risk and past return. " +
+              (winner.risk === "High" ? "It carries higher risk, so size positions carefully." : "Its risk level looks manageable.");
+  }
+
+  return title("AI stock advisor", "Compare two stocks on price, valuation, risk and past returns.") +
+    '<div class="grid"><div><label>First stock</label>' + picker(0, compareA) + "</div><div><label>Second stock</label>" + picker(1, compareB) + "</div></div>" +
+    '<div class="card scroll"><table><tr><th></th><th>' + first.symbol + "</th><th>" + second.symbol + "</th></tr>" +
+    row("Company", first.name, second.name) + row("Sector", first.sector, second.sector) +
+    row("Price", money(first.price), money(second.price)) + row("P/E ratio", first.pe, second.pe) +
+    row("Risk", first.risk, second.risk) + row("1-year return", first.oneYear + "%", second.oneYear + "%") +
+    row("Score out of 100", "<b>" + firstScore + "</b>", "<b>" + secondScore + "</b>") + "</table></div>" +
+    '<div class="card space"><h2>Summary</h2><p>' + summary + '</p><p class="soft">This is an educational score from sample data, not investment advice. Check live data and talk to a SEBI-registered advisor before investing real money.</p></div>';
+};
+
+/* ---------- Virtual portfolio ---------- */
+pageFunctions.portfolio = function () {
+  var holdings = holdingsList();
+  var profit = 0;
+  var rows = "";
+  for (var i = 0; i < holdings.length; i++) {
+    var h = holdings[i];
+    var gain = (h.stock.price - h.avg) * h.qty;
+    profit += gain;
+    rows += "<tr><td><b>" + h.symbol + '</b></td><td class="right">' + h.qty + '</td><td class="right">' + money(h.avg) + '</td><td class="right">' + money(h.stock.price) +
+            '</td><td class="right ' + (gain >= 0 ? "good" : "bad") + '">' + (gain >= 0 ? "+" : "") + money(gain) + "</td></tr>";
+  }
+  if (rows === "") rows = '<tr><td colspan="5" class="soft">No holdings yet. Buy your first stock above.</td></tr>';
+
+  var options = "";
+  for (var s = 0; s < stocks.length; s++) {
+    options += '<option value="' + stocks[s].symbol + '">' + stocks[s].symbol + " – " + money(stocks[s].price) + "</option>";
+  }
+
+  return title("Virtual portfolio", "Practise buying and selling with virtual money. No real funds involved.") +
+    '<div class="grid">' + simpleCard("Cash", money(data.cash), "") + simpleCard("Holdings value", money(holdingsValue()), "") +
+    simpleCard("Profit / loss", (profit >= 0 ? "+" : "") + money(profit), profit >= 0 ? "good" : "bad") + "</div>" +
+    '<div class="card space"><h2>Place a trade</h2><div class="grid">' +
+    '<div><label for="tradeStock">Stock</label><select id="tradeStock">' + options + "</select></div>" +
+    '<div><label for="tradeQty">Quantity</label><input id="tradeQty" type="number" min="1" value="10"></div></div>' +
+    "<button onclick=\"trade('buy')\">Buy</button> <button class=\"plain\" onclick=\"trade('sell')\">Sell</button></div>" +
+    '<div class="card scroll space"><table><tr><th>Stock</th><th class="right">Qty</th><th class="right">Avg price</th><th class="right">Now</th><th class="right">P/L</th></tr>' + rows + "</table></div>";
+};
+
+/* ---------- Alerts (the last page) ---------- */
+pageFunctions.alerts = function () {
+  var alerts = makeAlerts();
+  var boxes = "";
+  for (var i = 0; i < alerts.length; i++) {
+    var a = alerts[i];
+    boxes += '<div class="alert ' + a.level + '"><span class="icon-box">' + icon("alerts") + "</span>" +
+             "<div><b>" + safe(a.title) + '</b><div class="soft">' + safe(a.text) + "</div></div>" +
+             '<span class="pill" style="color:' + (a.level === "urgent" ? "#ff8a80" : "#f5c542") + '">' + (a.level === "urgent" ? "Urgent" : "Warning") + "</span></div>";
+  }
+  if (boxes === "") {
+    boxes = '<div class="alert ok"><span class="icon-box">' + icon("alerts") + "</span><div><b>No alerts</b>" +
+            '<div class="soft">Everything looks fine. Your balances and category limits are all within range.</div></div></div>';
+  }
+  var heading = alerts.length > 0 ? alerts.length + " active alert" + (alerts.length > 1 ? "s" : "") : "All clear";
+
+  return title("Alerts", "Warnings about your category limits, bank balance and savings.") +
+    '<div class="card"><div class="section-head"><h2>' + heading + "</h2></div>" + boxes + "</div>" +
+    '<div class="card space"><h2>Balances and alert levels</h2>' +
+    '<p class="soft">Your bank balance updates by itself when you import or sync transactions. You can also set it yourself.</p><div class="grid">' +
+    '<div><label for="bankBalance">Bank balance (₹)</label><input id="bankBalance" type="number" value="' + data.bank + '" onchange="setNumber(\'bank\', this.value)"></div>' +
+    '<div><label for="savingsBalance">Savings (₹)</label><input id="savingsBalance" type="number" value="' + data.savingsGoal.saved + '" onchange="setGoal(\'saved\', this.value)"></div>' +
+    '<div><label for="bankLevel">Alert when bank is at or below (₹)</label><input id="bankLevel" type="number" value="' + data.bankLimit + '" onchange="setNumber(\'bankLimit\', this.value)"></div>' +
+    '<div><label for="savingsLevel">Alert when savings is at or below (₹)</label><input id="savingsLevel" type="number" value="' + data.savingsLimit + '" onchange="setNumber(\'savingsLimit\', this.value)"></div>' +
+    "</div></div>";
+};
+
+/* =====================================================
+   7. SHOWING A PAGE
+   ===================================================== */
+function goTo(pageId) { location.hash = pageId; }
+
+// Draws the menu on the left and highlights the current page
+function drawMenu(current) {
+  var count = makeAlerts().length;
+  var html = '<div class="logo"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--gold);vertical-align:-3px;margin-right:6px"><path d="M5 20v-6M12 20V8M19 20V4"/></svg>JARVIS</div>';
+  for (var i = 0; i < pages.length; i++) {
+    var id = pages[i][0];
+    html += '<a href="#' + id + '" class="' + (id === current ? "active" : "") + '">' + icon(id) + "<span>" + pages[i][1] + "</span>" +
+            (id === "alerts" && count > 0 ? '<b class="badge">' + count + "</b>" : "") + "</a>";
+  }
+  $("menu").innerHTML = html;
+}
+
+// keepPlace = true keeps the page scrolled where you were
+function render(keepPlace) {
+  var oldScroll = window.scrollY;
+  var id = location.hash.slice(1);
+  if (!pageFunctions[id]) id = "home";
+
+  try {
+    $("page").innerHTML = pageFunctions[id]();
+  } catch (error) {
+    console.error(error);
+    $("page").innerHTML = '<div class="card"><h2>Something went wrong</h2><p class="soft">Try reloading the page. If it keeps happening, reset your saved data.</p>' +
+                          '<button onclick="resetAll()">Reset all data</button></div>';
+  }
+  drawMenu(id);
+  window.scrollTo(0, keepPlace ? oldScroll : 0);
+  if ($("chat")) $("chat").scrollTop = $("chat").scrollHeight;
+}
+
+/* =====================================================
+   8. WHAT THE BUTTONS DO
+   ===================================================== */
+
+// ----- Login / Register (demo only) -----
+function login() {
+  var email = $("loginEmail").value.trim();
+  if (email === "") { showMessage("Enter your email"); return; }
+  data.loggedIn = true;
+  data.email = email;
+  if (data.name === "Guest") data.name = email.split("@")[0];
+  save();
+  goTo("dashboard");
+}
+
+function register() {
+  var name = $("regName").value.trim();
+  var email = $("regEmail").value.trim();
+  if (name === "" || email === "" || $("regPass").value === "") { showMessage("Fill in all fields"); return; }
+  data.loggedIn = true;
+  data.name = name;
+  data.email = email;
+  save();
+  showMessage("Account created");
+  goTo("dashboard");
+}
+
+function logout() {
+  data.loggedIn = false;
+  save();
+  render();
+}
+
+// ----- Transactions -----
+function importText(text) {
+  var added = addTransactions(parseTransactions(text));
+  showMessage(added > 0 ? "Imported " + added + " transactions" : "No new transactions found");
+}
+
+function importPasted() {
+  var box = $("pasteBox");
+  importText(box.value);
+  box.value = "";
+}
+
+function importFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function () { importText(String(reader.result)); };
+  reader.onerror = function () { showMessage("Could not read that file"); };
+  reader.readAsText(file);
+}
+
+function changeCategory(id, category) {
+  for (var i = 0; i < data.expenses.length; i++) {
+    if (data.expenses[i].id === id) data.expenses[i].category = category;
+  }
+  if (data.autoBudget) applyAutoBudget();
+  save();
+  render(true);
+}
+
+function removeTransaction(id, isIncome) {
+  var list = isIncome ? data.incomes : data.expenses;
+  var found = null;
+  var kept = [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].id === id) found = list[i];
+    else kept.push(list[i]);
+  }
+  if (!found) return;
+  data.bank = data.bank + (isIncome ? -found.amount : found.amount);     // put the balance back
+  if (isIncome) data.incomes = kept;
+  else data.expenses = kept;
+  afterChange();
+}
+
+function scrollToList() {
+  var table = $("fullList");
+  if (table) table.scrollIntoView({ behavior: "smooth" });
+}
+
+// ----- Auto-sync (needs a server that sends your transactions as JSON) -----
+var syncTimer = null;
+
+function syncNow(manual) {
+  if (!data.syncUrl) return;
+  fetch(data.syncUrl)
+    .then(function (response) {
+      if (!response.ok) throw new Error("bad answer");
+      return response.json();
+    })
+    .then(function (json) {
+      var items = Array.isArray(json) ? json : (json.transactions || []);
+      var list = [];
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var amount = roundMoney(Math.abs(Number(item.amount)) || 0);
+        var date = String(item.date || "").slice(0, 10);
+        if (amount > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          list.push({
+            date: date,
+            name: String(item.description || item.title || item.merchant || "Payment"),
+            amount: amount,
+            income: /^(cr|credit)/i.test(item.type || "")
+          });
+        }
+      }
+      var added = addTransactions(list);
+      if (added > 0 || manual) showMessage("Synced " + added + " new transactions");
+    })
+    .catch(function () {
+      showMessage("Sync failed. Check the address and that your server allows access.");
+    });
+}
+
+function startSync() {
+  clearInterval(syncTimer);
+  if (data.syncUrl) {
+    syncNow(false);
+    syncTimer = setInterval(function () { syncNow(false); }, 5 * 60 * 1000);
+  }
+}
+
+function saveSyncUrl() {
+  data.syncUrl = $("syncUrl").value.trim();
+  save();
+  if (data.syncUrl) {
+    startSync();
+    syncNow(true);
+  } else {
+    clearInterval(syncTimer);
+    showMessage("Auto-sync turned off");
+  }
+}
+
+// ----- Budget planner and alert settings -----
+function setBudget(value) { data.budget = Math.max(0, num(value)); save(); render(true); }
+
+function setLimit(category, value) { data.limits[category] = Math.max(0, num(value)); save(); render(true); }
+
+function setAutoBudget(isOn) {
+  data.autoBudget = isOn;
+  if (isOn) applyAutoBudget();
+  save();
+  render(true);
+}
+
+function setGoal(field, value) {
+  if (field === "name") {
+    data.savingsGoal.name = value;
+    save();
+    return;                                  // no need to redraw for text
+  }
+  data.savingsGoal[field] = Math.max(field === "target" ? 1 : 0, num(value));
+  data.lastAlerts = makeAlerts().length;
+  save();
+  render(true);
+}
+
+// Used for the bank balance and the two alert levels
+function setNumber(field, value) {
+  data[field] = num(value);
+  data.lastAlerts = makeAlerts().length;
+  save();
+  render(true);
+}
+
+// ----- Dashboard chart -----
+function setChartDays(days) { chartDays = days; render(true); }
+
+// ----- Profile -----
+function saveProfile() {
+  data.name = $("profName").value.trim() || "Guest";
+  data.email = $("profEmail").value.trim();
+  data.income = Math.max(0, num($("profIncome").value));
+  save();
+  showMessage("Profile saved");
+}
+
+function resetAll() {
+  try { localStorage.removeItem(STORAGE_NAME); } catch (error) {}
+  location.reload();
+}
+
+// ----- Stocks -----
+function showStocks() { $("results").innerHTML = stockTable($("search").value); }
+
+function startCompare(symbol) {
+  var other = compareA === symbol ? compareB : compareA;
+  compareA = symbol;
+  compareB = other;
+  goTo("advisor");
+}
+
+function setCompare(position, symbol) {
+  if (position === 0) compareA = symbol;
+  else compareB = symbol;
+  render(true);
+}
+
+function addStockGoal() {
+  data.stockGoals.push({ symbol: $("goalStock").value, target: Math.max(1, num($("goalAmount").value) || 1000), saved: 0 });
+  save();
+  render(true);
+}
+
+function addToGoal(index) {
+  var amount = num($("deposit" + index).value);
+  if (amount <= 0) return;
+  data.stockGoals[index].saved += amount;
+  save();
+  render(true);
+  showMessage("Added " + money(amount));
+}
+
+function removeGoal(index) {
+  data.stockGoals.splice(index, 1);
+  save();
+  render(true);
+}
+
+// ----- Virtual portfolio: buy or sell -----
+function trade(action) {
+  var symbol = $("tradeStock").value;
+  var qty = Math.floor(num($("tradeQty").value));
+  var stock = findStock(symbol);
+  var holding = data.holdings[symbol];
+  if (!stock || qty < 1) { showMessage("Enter a quantity"); return; }
+
+  if (action === "buy") {
+    if (qty * stock.price > data.cash) { showMessage("Not enough virtual cash"); return; }
+    data.cash = data.cash - qty * stock.price;
+    if (holding) {
+      holding.avg = (holding.avg * holding.qty + stock.price * qty) / (holding.qty + qty);
+      holding.qty = holding.qty + qty;
+    } else {
+      data.holdings[symbol] = { qty: qty, avg: stock.price };
+    }
+  } else {
+    if (!holding || holding.qty < qty) { showMessage("You do not hold that many"); return; }
+    data.cash = data.cash + qty * stock.price;
+    holding.qty = holding.qty - qty;
+    if (holding.qty === 0) delete data.holdings[symbol];
+  }
+  save();
+  render(true);
+  showMessage((action === "buy" ? "Bought " : "Sold ") + qty + " " + symbol);
+}
+
+// ----- AI assistant (simple rules that use your own numbers) -----
+function ask(suggestion) {
+  var question = (suggestion || $("question").value).trim();
+  if (question === "") return;
+
+  var text = question.toLowerCase();
+  var spent = total(monthExpenses());
+  var reply;
+
+  if (/spend|expense|spent/.test(text)) {
+    var topName = "";
+    var topAmount = 0;
+    var cats = categoryTotals();
+    for (var i = 0; i < cats.length; i++) {
+      if (cats[i][1] > topAmount) { topAmount = cats[i][1]; topName = cats[i][0]; }
+    }
+    reply = "You have spent " + money(spent) + " this month" + (topName ? ", mostly on " + topName + " (" + money(topAmount) + ")" : "") + ".";
+  } else if (/budget/.test(text)) {
+    if (spent > data.budget) reply = "You are " + money(spent - data.budget) + " over your " + money(data.budget) + " budget. Trim Fun or Shopping first.";
+    else reply = "You are within budget with " + money(data.budget - spent) + " left.";
+  } else if (/save|saving/.test(text)) {
+    reply = "You could save about " + money(Math.max(0, data.income - spent)) + " this month. A common rule is to put 20% of income (" +
+            money(data.income * 0.2) + ") aside first, then spend what remains.";
+  } else if (/stock|invest|start/.test(text)) {
+    reply = "Beginners often start with large, stable companies such as TCS, HDFC Bank or ITC, and spread money across sectors. Try them in the Virtual Portfolio before using real money. This is general education, not advice.";
+  } else {
+    reply = "I can help with spending, budget, savings and stocks. Try one of the suggested questions.";
+  }
+
+  data.chat.push({ from: "me", text: question });
+  data.chat.push({ from: "bot", text: reply });
+  data.chat = data.chat.slice(-40);            // keep the chat from growing forever
+  save();
+  render(true);
+  if ($("question")) $("question").focus();
+}
+
+/* =====================================================
+   9. START
+   ===================================================== */
+window.addEventListener("hashchange", function () { render(); });
+render();
+startSync();
+</script>
+</body>
+</html>
